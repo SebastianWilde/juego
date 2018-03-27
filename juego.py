@@ -23,8 +23,12 @@ class Pikachu(pygame.sprite.Sprite):
         self.imagePikachuLD = pygame.image.load('imagenes/Pikachu/pika_LD.png')
         self.imagePikachuRU = pygame.image.load('imagenes/Pikachu/pika_RU.png')
         self.imagePikachuRD = pygame.image.load('imagenes/Pikachu/pika_RD.png')
+        self.imagePikachuJL = pygame.image.load('imagenes/Pikachu/pika_JL.png')
+        self.imagePikachuJR = pygame.image.load('imagenes/Pikachu/pika_JR.png')
+        self.imagePikachuSad = pygame.image.load('imagenes/Pikachu/pika_sad.png')
         self.imageLife = pygame.image.load('imagenes/life1.png')
-        self.imageList = [self.imagePikachuN,self.imagePikachuLD,self.imagePikachuLU,self.imagePikachuRU,self.imagePikachuRD]
+        self.imageList = [self.imagePikachuN,self.imagePikachuLD,self.imagePikachuLU,self.imagePikachuRU,self.imagePikachuRD,self.imagePikachuJL,
+        self.imagePikachuJR,self.imagePikachuSad]
         
         self.imagePikachu = self.imageList[0] 
 
@@ -32,15 +36,21 @@ class Pikachu(pygame.sprite.Sprite):
         self.rectLife = self.imageLife.get_rect()
         self.rect = self.imagePikachu.get_rect()
         
+        #Velocidad
+        self.speed = 20
+
         #Posicionarlo en el centro
         self.rect.centerx = WIDTH/2
         self.rect.centery = HEIGHT - 60
+        self.base = self.rect.top
+        self.maxHeight = self.base  - self.speed * 7
         
         #Numero de vidas
         self.life = 3
 
-        #Velocidad
-        self.speed = 20
+        
+        #Puntaje
+        self.score = 0
 
         #Inicio movimiento
         self.movementTime = 0
@@ -51,6 +61,12 @@ class Pikachu(pygame.sprite.Sprite):
         #Tiempo de la animacion de movimiento en milisegunos
         self.animationTime = 100
     
+    def gameOver(self):
+        self.direction = "None"
+        self.rect.centerx = WIDTH/2
+        self.rect.centery = HEIGHT - 60
+
+
     def leftMovement(self,time):
         self.rect.left -= self.speed
         self.movementTime = time
@@ -65,8 +81,52 @@ class Pikachu(pygame.sprite.Sprite):
         self.__movement()
 
 
+    def verticalJump(self,time):
+        self.direction = "Jump"
+        self.movementTime = time
     
+    def leftJump(self,time):
+        self.direction = "leftJump"
+        print("hey")
+        self.movementTime = time
     
+    def rightJump(self,time):
+        self.direction = "rightJump"
+        self.movementTime = time
+
+    def jumpBehavior(self,orintation):
+        if orintation == "up" and self.rect.top > self.maxHeight:
+            self.rect.top -= self.speed
+        elif orintation == "down" and self.rect.top < self.base:
+            self.rect.top += self.speed
+        if self.rect.top == self.base:
+            self.direction = "None"
+        print("JUMP",orintation,self.rect.top)
+
+    def leftJumpBehavior(self,orintation):
+        if orintation == "up" and self.rect.top > self.maxHeight:
+            self.rect.top -= self.speed
+            self.rect.left -= self.speed/2
+        elif orintation == "down" and self.rect.top < self.base:
+            self.rect.top += self.speed
+            self.rect.left -= self.speed/2
+        if self.rect.top == self.base:
+            self.direction = "None"
+        self.__movement()
+        print("JUMPL",orintation,self.rect.top,self.rect.left)
+
+    def rightJumpBehavior(self,orintation):
+        if orintation == "up" and self.rect.top > self.maxHeight:
+            self.rect.top -= self.speed
+            self.rect.left += self.speed/2
+        elif orintation == "down" and self.rect.top < self.base:
+            self.rect.top += self.speed
+            self.rect.left += self.speed/2
+        if self.rect.top == self.base:
+            self.direction = "None"
+        self.__movement()
+        print("JUMPR",orintation,self.rect.top,self.rect.left)
+
     #Movimiento
     def __movement(self):
         if self.life > 0:
@@ -83,8 +143,10 @@ class Pikachu(pygame.sprite.Sprite):
                 self.rectLife.top = 0
                 screnn.blit(self.imageLife,self.rectLife)
 
-        if self.direction == "None":
+        if self.direction == "None" and self.life > 0:
             self.imagePikachu = self.imageList[0]
+        elif self.direction == "None" and self.life < 1:
+            self.imagePikachu = self.imageList[7]
         elif self.direction == "Left" and time < self.movementTime + self.animationTime:
             self.imagePikachu = self.imageList[1]
         elif self.direction == "Left" and time > self.movementTime + self.animationTime and time < self.movementTime + self.animationTime*2:
@@ -93,6 +155,22 @@ class Pikachu(pygame.sprite.Sprite):
             self.imagePikachu = self.imageList[3]
         elif self.direction == "Right" and time > self.movementTime + self.animationTime and time < self.movementTime + self.animationTime*2:
             self.imagePikachu = self.imageList[4]
+        elif self.direction == "Jump" and time < self.movementTime + self.animationTime:
+            self.jumpBehavior("up")
+        elif self.direction == "Jump" and time > self.movementTime + self.animationTime and time < self.movementTime + self.animationTime*3:
+            self.jumpBehavior("down")
+        elif self.direction == "leftJump" and time < self.movementTime + self.animationTime:
+            self.leftJumpBehavior("up")
+            self.imagePikachu = self.imageList[5]
+        elif self.direction == "leftJump" and time > self.movementTime + self.animationTime and time < self.movementTime + self.animationTime*3:
+            self.leftJumpBehavior("down")
+            self.imagePikachu = self.imageList[5]
+        elif self.direction == "rightJump" and time < self.movementTime + self.animationTime:
+            self.rightJumpBehavior("up")
+            self.imagePikachu = self.imageList[6]
+        elif self.direction == "rightJump" and time > self.movementTime + self.animationTime and time < self.movementTime + self.animationTime*3:
+            self.rightJumpBehavior("down")
+            self.imagePikachu = self.imageList[6]
         else:
             self.direction == "None"
             self.imagePikachu = self.imageList[0]
@@ -107,7 +185,13 @@ class Item(pygame.sprite.Sprite):
         self.itemsNames = ['bomb','cake1','cookie','cupcake','pokeball']
         
         #Item aletorio
-        self.itemRandom = randint(0,100) % 4
+        self.itemRandom = randint(0,100) % 5
+
+        #Tipo item
+        if self.itemsNames[self.itemRandom] in ['cake1','cookie','cupcake']:
+            self.itemType = 1
+        else:
+            self.itemType = -1
 
         #Imagen
         self.imagenItem = pygame.image.load('imagenes/Items/'+self.itemsNames[self.itemRandom]+'.png')
@@ -127,6 +211,13 @@ class Item(pygame.sprite.Sprite):
     #Moviemiento del item
     def trajectory (self):
         self.rect.top += self.speed
+    
+    #Retornar el tipo
+    def getType(self):
+        return self.itemType
+
+    def isCollition(self,rect1):
+        return self.rect.colliderect(rect1)
 
     def draw(self,screen):
         screen.blit(self.imagenItem,self.rect)
@@ -182,7 +273,7 @@ def main():
     rangeItems = 500
     timeItems = 0
     #Dentro de un loop infinito
-    while True:
+    while player.life > 0:
         #Numero de frames por segundo
         clock.tick(60)
         #Obtener el tiempo
@@ -200,11 +291,16 @@ def main():
                 sys.exit()
             if inGame == True:
                 if evento.type == pygame.KEYDOWN:
-                    if evento.key == K_LEFT:
+                    if evento.key == K_UP and player.direction == "Left":
+                        player.leftJump(time)
+                    elif evento.key == K_UP and player.direction == "Right":
+                        player.rightJump(time)
+                    elif evento.key == K_UP and player.direction != "Jump":
+                        player.verticalJump(time)
+                    elif evento.key == K_LEFT and player.direction != "Jump":
                         player.leftMovement(time)
-                    elif evento.key == K_RIGHT:
+                    elif evento.key == K_RIGHT and player.direction != "Jump":
                         player.rightMovement(time)
-
         #Dibujando el fondo
         screen.blit(backgroundImage,(0,0))
 
@@ -217,9 +313,40 @@ def main():
                 it.trajectory()
                 if it.rect.top > HEIGHT:
                     itemList.remove(it)
+                else:
+                    if it.isCollition(player.rect) == True:
+                        if it.getType() == 1:
+                            player.score += 1
+                            print("score:",player.score)
+                            print("item",it.itemsNames[it.itemRandom])
+                        else:
+                            player.life -= 1
+                            print("life:",player.life)
+                            print("item",it.itemsNames[it.itemRandom])
+                        itemList.remove(it)        
        
         #Actualizar la ventana
         pygame.display.update()
+    
+    del(itemList)
+    player.gameOver()
+    gameOverBI = pygame.image.load('imagenes/background/final score.png')
+    while True:
+        for evento in pygame.event.get():
+            if evento.type == QUIT:
+                pygame.quit()
+                sys.exit()
+        #Dibujando el fondo
+        screen.blit(gameOverBI,(0,0))
+
+        #Dibujar pikachu
+        player.draw(screen,time)
+
+        #Actualizar la ventana
+        pygame.display.update()
+
+
+
     
     return 0
 
