@@ -8,9 +8,9 @@ from random import randint
 
 #Constantes
 #Ancho de la pantalla en pixeles
-WIDTH = 480
+WIDTH = 960#480
 #Alto de la pantalla en pixeles
-HEIGHT = 360
+HEIGHT = 720#360
 
 #Clase para el personaje Pikachu
 class Pikachu(pygame.sprite.Sprite):
@@ -27,6 +27,7 @@ class Pikachu(pygame.sprite.Sprite):
         self.imagePikachuJR = pygame.image.load('imagenes/Pikachu/pika_JR.png')
         self.imagePikachuSad = pygame.image.load('imagenes/Pikachu/pika_sad.png')
         self.imageLife = pygame.image.load('imagenes/life1.png')
+        self.imageScore = pygame.image.load('imagenes/score.png')
         self.imageList = [self.imagePikachuN,self.imagePikachuLD,self.imagePikachuLU,self.imagePikachuRU,self.imagePikachuRD,self.imagePikachuJL,
         self.imagePikachuJR,self.imagePikachuSad]
         
@@ -35,9 +36,10 @@ class Pikachu(pygame.sprite.Sprite):
         #Retorna un rectangulo de la imagen
         self.rectLife = self.imageLife.get_rect()
         self.rect = self.imagePikachu.get_rect()
+        self.rectScore = self.imageScore.get_rect()
         
         #Velocidad
-        self.speed = 20
+        self.speed = 50#20
 
         #Posicionarlo en el centro
         self.rect.centerx = WIDTH/2
@@ -47,10 +49,10 @@ class Pikachu(pygame.sprite.Sprite):
         
         #Numero de vidas
         self.life = 3
-
         
         #Puntaje
         self.score = 0
+        self.myfont = pygame.font.SysFont('Comic Sans MS', 30)
 
         #Inicio movimiento
         self.movementTime = 0
@@ -59,12 +61,14 @@ class Pikachu(pygame.sprite.Sprite):
         self.direction = "None"
 
         #Tiempo de la animacion de movimiento en milisegunos
-        self.animationTime = 100
+        self.animationTime = 200#100
     
     def gameOver(self):
         self.direction = "None"
-        self.rect.centerx = WIDTH/2
+        self.rect.centerx = WIDTH/2 + 100
         self.rect.centery = HEIGHT - 60
+        self.rectScore.centerx = self.rect.centerx + 75
+        self.rectScore.centery = self.rect.centery - 75
 
 
     def leftMovement(self,time):
@@ -134,8 +138,10 @@ class Pikachu(pygame.sprite.Sprite):
                 self.rect.left = WIDTH - self.rect.width
             elif self.rect.right > WIDTH:
                 self.rect.right = 0 + self.rect.width
+            elif self.rect.centery != HEIGHT - 60 and not(self.direction != "jump"  or self.direction != "rightJump" or self.direction != "leftJump"):
+                self.rect.centery = HEIGHT - 60
 
-    def draw(self,screnn,time):
+    def draw(self,screnn,time,showScore = False):
         #Posicionar las imagenes de la vida
         if self.life > 0:
             for pos in range(0,self.life):
@@ -174,6 +180,15 @@ class Pikachu(pygame.sprite.Sprite):
         else:
             self.direction == "None"
             self.imagePikachu = self.imageList[0]
+        if showScore == True:
+            self.rectScore.centerx = self.rect.centerx + 75
+            self.rectScore.centery = self.rect.centery - 75
+            finalScore = str(self.score)
+            textsurface = self.myfont.render(finalScore, False, (0, 0, 0))
+            x = self.rectScore.centerx + 2
+            y = self.rectScore.centery - 17
+            screnn.blit(self.imageScore,self.rectScore)
+            screnn.blit(textsurface,(x,y))
         screnn.blit(self.imagePikachu,self.rect)
 
 #Clase para los items
@@ -200,7 +215,7 @@ class Item(pygame.sprite.Sprite):
         self.rect = self.imagenItem.get_rect()
         
         #Velocidad
-        self.speed = 1
+        self.speed = 2
 
         self.rect.top = 0
 
@@ -232,9 +247,17 @@ def main():
 
     #Cargar imagen de fondo
     startBackgroundImage = pygame.image.load('imagenes/background/intro_2.png')
-    instructionsBackgroundImage = pygame.image.load('imagenes/background/instructions_1.png')
-    backgroundImage = pygame.image.load('imagenes/background/game_1.png')
+    instructionsBackgroundImage = pygame.image.load('imagenes/background/instructions_1_grande.png')
+    backgroundImage = pygame.image.load('imagenes/background/game_1_grande.png')
     
+    #Cargar sonidos y audios
+    soundInit = pygame.mixer.Sound('audios/piKAchu_cute.wav')
+    soundCoin = pygame.mixer.Sound('audios/coin.wav')
+    soundBomb = pygame.mixer.Sound('audios/pika_dead.wav')
+    pygame.mixer.music.load('audios/cycling_cut.mp3')
+    
+    
+
     stillStart = True
     instructions = False
     timeInstructions = None
@@ -248,14 +271,17 @@ def main():
             if evento.type == pygame.KEYDOWN:
                 if evento.key == K_SPACE:
                     instructions = True
+                    soundInit.play()
                     timeInstructions = pygame.time.get_ticks()
+                if evento.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
 
         if timeInstructions != None:
             if pygame.time.get_ticks() > timeInstructions + 3000:
                 stillStart = False
         #Actualizar la ventana
         pygame.display.update()
-
 
 
 
@@ -268,6 +294,9 @@ def main():
 
     #Reloj para... 
     clock = pygame.time.Clock()
+
+    #Iniciando musica
+    pygame.mixer.music.play(-1)
 
     #Rango de aparicion de items en milisegundos
     rangeItems = 500
@@ -303,10 +332,9 @@ def main():
                         player.rightMovement(time)
         #Dibujando el fondo
         screen.blit(backgroundImage,(0,0))
-
-        #Dibujar pikachu
-        player.draw(screen,time)
-
+        
+        
+        showScore = True
         if len(itemList) > 0 :
             for it in itemList:
                 it.draw(screen)
@@ -317,20 +345,26 @@ def main():
                     if it.isCollition(player.rect) == True:
                         if it.getType() == 1:
                             player.score += 1
+                            soundCoin.play()
+                            #showScore = True
                             print("score:",player.score)
                             print("item",it.itemsNames[it.itemRandom])
                         else:
                             player.life -= 1
+                            showScore = False
+                            soundBomb.play()
                             print("life:",player.life)
                             print("item",it.itemsNames[it.itemRandom])
                         itemList.remove(it)        
        
+        #Dibujar pikachu
+        player.draw(screen,time,showScore)
         #Actualizar la ventana
         pygame.display.update()
     
     del(itemList)
     player.gameOver()
-    gameOverBI = pygame.image.load('imagenes/background/final score.png')
+    gameOverBI = pygame.image.load('imagenes/background/finalscore_grande.png')
     while True:
         for evento in pygame.event.get():
             if evento.type == QUIT:
@@ -340,7 +374,7 @@ def main():
         screen.blit(gameOverBI,(0,0))
 
         #Dibujar pikachu
-        player.draw(screen,time)
+        player.draw(screen,time,True)
 
         #Actualizar la ventana
         pygame.display.update()
